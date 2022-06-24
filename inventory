@@ -1,0 +1,9 @@
+[db_servers]
+lamp_db ansible_host=192.168.231.141 ansible_user=ubuntu mysqlservice=mysqld mysql_port=3306 dbname=ecomdb dbuser=ecomuser dbpassword=ecompassword ansible_ssh_private_key_file=/home/ubuntu/.ssh/maria
+
+
+
+
+[web_servers]
+lamp_web ansible_host=192.168.231.142 ansible_user=ubuntu httpd_port=80 repository=https://github.com/kodekloudhub/learning-app-ecommerce.git ansible_ssh_private_key_file=/home/ubuntu/.ssh/john
+
