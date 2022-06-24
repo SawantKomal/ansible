@@ -1,0 +1,131 @@
+- name: Deploy lamp stack application
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Install common dependencies
+      apt:
+        name:
+          - firewalld
+        state: present
+
+- name: Install maria-db and python-mysql on the lamp_db
+  hosts: db_servers
+  become: yes
+  tasks:
+    - name: Install common dependencies
+      apt:
+        name:
+          - mariadb-server
+          - python3-pymysql 
+        state: present
+    - name: copy my.cnf to ~/.my.cnf
+      copy:
+        src: files/my.cnf
+        dest: /etc/mysql/my.cnf 
+    - name: start and enable maria db service
+      service:
+        name: mariadb
+        state: started
+        enabled: yes
+    - name: start and enable firewalld service
+      service:
+        name: firewalld
+        state: started
+        enabled: yes
+    - name: Insert firewall rules
+      firewalld:
+        port: "{{ mysql_port }}/tcp"
+        permanent: true 
+        state: enabled 
+        immediate: yes
+
+
+- name: Configure DB
+  hosts: db_servers
+  become: yes
+  tasks:
+  - name: Create Application Database
+    mysql_db:
+      name: "{{ dbname }}"
+      login_unix_socket: /var/run/mysqld/mysqld.sock
+      config_file: /etc/mysql/my.cnf
+      state: present
+
+  - name: Create Application Database User
+    mysql_user:
+      name: "{{ dbuser }}"
+      password: "{{ dbpassword }}"
+      priv: "*.*:ALL"
+      host: '192.168.231.142'
+      login_unix_socket: /var/run/mysqld/mysqld.sock
+      state: present
+
+  - name:  Copy db-load-script.sql file to /tmp directory on the database server
+    copy:
+      src: files/db-load-script.sql
+      dest: /tmp
+
+  - name: Load Inventory data by running the below shell command on the database server
+    shell:
+      cmd: mysql -f < /tmp/db-load-script.sql 
+
+- name: COnfigure webserver
+  hosts: web_servers
+  become: yes
+  tasks:
+    - name: Install apache2
+      apt:
+        name: apache2
+        state: present
+    - name: Install php, php-mysql pkg
+      apt:
+        name: php,php-mysql
+        state: present
+    - name: Install git
+      apt:
+        name: git
+        state: present
+    - name: Insert firewalld rule for httpd
+      firewalld:
+              #service: http
+        port: "{{ httpd_port }}/tcp"
+        permanent: yes
+        state: enabled
+        immediate: yes
+
+    - name: Start and enable the httpd service
+      service:
+        name: apache2
+        state: started 
+        enabled: yes
+
+    - name: clone the repo
+      git:
+        repo: "{{ repository }}"
+        dest: /var/www/html
+
+    - name: Copy index.php
+      copy:
+        src: files/index.php
+        dest: /var/www/html/index.php
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
